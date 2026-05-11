@@ -7,45 +7,52 @@
 char tasks[MAX][100];
 int count = 0;
 
-// Load tasks from file
+// NEW: Robustly clears the input buffer to fix online compiler issues
+void clearBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
 void loadTasks() {
     FILE *fp = fopen("tasks.txt", "r");
     if (fp == NULL) return;
 
-    while (fgets(tasks[count], 100, fp)) {
+    count = 0; 
+    while (count < MAX && fgets(tasks[count], 100, fp)) {
         tasks[count][strcspn(tasks[count], "\n")] = '\0';
-        count++;
+        if (strlen(tasks[count]) > 0) count++;
     }
     fclose(fp);
 }
 
-// Save tasks to file
 void saveTasks() {
     FILE *fp = fopen("tasks.txt", "w");
+    if (fp == NULL) return;
     for (int i = 0; i < count; i++) {
         fprintf(fp, "%s\n", tasks[i]);
     }
     fclose(fp);
 }
 
-// Add task
 void addTask() {
     if (count >= MAX) {
         printf("Task list full!\n");
         return;
     }
     printf("Enter task: ");
-    getchar(); // clear buffer
-    fgets(tasks[count], 100, stdin);
-    tasks[count][strcspn(tasks[count], "\n")] = '\0';
-    count++;
-    saveTasks();
+    if (fgets(tasks[count], 100, stdin)) {
+        tasks[count][strcspn(tasks[count], "\n")] = '\0';
+        if (strlen(tasks[count]) > 0) {
+            count++;
+            saveTasks();
+            printf("Task added!\n");
+        }
+    }
 }
 
-// View tasks
 void viewTasks() {
     if (count == 0) {
-        printf("No tasks available.\n");
+        printf("\nNo tasks available.\n");
         return;
     }
     printf("\nYour Tasks:\n");
@@ -54,14 +61,19 @@ void viewTasks() {
     }
 }
 
-// Delete task
 void deleteTask() {
-    int num;
+    if (count == 0) {
+        printf("\nNo tasks to delete.\n");
+        return;
+    }
     viewTasks();
-    if (count == 0) return;
-
+    int num;
     printf("Enter task number to delete: ");
-    scanf("%d", &num);
+    if (scanf("%d", &num) != 1) {
+        clearBuffer();
+        return;
+    }
+    clearBuffer(); 
 
     if (num < 1 || num > count) {
         printf("Invalid number!\n");
@@ -71,7 +83,6 @@ void deleteTask() {
     for (int i = num - 1; i < count - 1; i++) {
         strcpy(tasks[i], tasks[i + 1]);
     }
-
     count--;
     saveTasks();
     printf("Task deleted!\n");
@@ -88,7 +99,13 @@ int main() {
         printf("3. Delete Task\n");
         printf("4. Exit\n");
         printf("Enter choice: ");
-        scanf("%d", &choice);
+        
+        if (scanf("%d", &choice) != 1) {
+            printf("Invalid input.\n");
+            clearBuffer();
+            continue;
+        }
+        clearBuffer(); // This is the key fix for the menu loop
 
         switch (choice) {
             case 1: addTask(); break;
@@ -98,6 +115,5 @@ int main() {
             default: printf("Invalid choice!\n");
         }
     }
-
     return 0;
 }
